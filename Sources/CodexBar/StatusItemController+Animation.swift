@@ -343,7 +343,21 @@ extension StatusItemController {
     }
 
     func menuBarDisplayText(for provider: UsageProvider, snapshot: UsageSnapshot?) -> String? {
-        MenuBarDisplayText.displayText(
+        let preference = self.settings.menuBarMetricPreference(for: provider)
+        // Use dual format when explicitly set, or automatic with both quotas present
+        // Exclude Gemini: its two quotas are both daily (Pro vs Flash), not daily/weekly
+        let useDual = preference == .dual
+            || (preference == .automatic && provider != .gemini
+                && snapshot?.primary != nil && snapshot?.secondary != nil)
+        if useDual {
+            return MenuBarDisplayText.displayTextDual(
+                mode: self.settings.menuBarDisplayMode,
+                provider: provider,
+                primary: snapshot?.primary,
+                secondary: snapshot?.secondary,
+                showUsed: self.settings.usageBarsShowUsed)
+        }
+        return MenuBarDisplayText.displayText(
             mode: self.settings.menuBarDisplayMode,
             provider: provider,
             percentWindow: self.menuBarPercentWindow(for: provider, snapshot: snapshot),
