@@ -146,15 +146,25 @@ if [[ "$ALLOW_LLDB" == "1" && "$LOWER_CONF" != "debug" ]]; then
   echo "ERROR: CODEXBAR_ALLOW_LLDB requires debug configuration" >&2
   exit 1
 fi
+TEAM_ID=""
+if [[ -n "${CODESIGN_ID:-}" && "$CODESIGN_ID" != "-" ]]; then
+  # Extract team ID from the signing identity (e.g., "Apple Development: Name (TEAMID)")
+  if [[ "$CODESIGN_ID" =~ \(([A-Z0-9]+)\)$ ]]; then
+    TEAM_ID="${BASH_REMATCH[1]}"
+  fi
+fi
 cat > "$APP_ENTITLEMENTS" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-    <key>com.apple.security.application-groups</key>
+    $(if [[ -n "$TEAM_ID" ]]; then cat <<KEYCHAIN
+    <key>keychain-access-groups</key>
     <array>
-        <string>${APP_GROUP_ID}</string>
+        <string>${TEAM_ID}.${BUNDLE_ID}</string>
     </array>
+KEYCHAIN
+    fi)
     $(if [[ "$ALLOW_LLDB" == "1" ]]; then echo "    <key>com.apple.security.get-task-allow</key><true/>"; fi)
 </dict>
 </plist>
@@ -301,7 +311,7 @@ elif [[ "$ALLOW_LLDB" == "1" ]]; then
   CODESIGN_ID="-"
   CODESIGN_ARGS=(--force --sign "$CODESIGN_ID")
 else
-  CODESIGN_ID="${APP_IDENTITY:-Developer ID Application: Peter Steinberger (Y5PE65HELJ)}"
+  CODESIGN_ID="${APP_IDENTITY:-Apple Development: William Kronmiller (BL2D669Y94)}"
   CODESIGN_ARGS=(--force --timestamp --options runtime --sign "$CODESIGN_ID")
 fi
 function resign() { codesign "${CODESIGN_ARGS[@]}" "$1"; }

@@ -45,6 +45,7 @@ resolve_signing_mode() {
 
   local candidate=""
   for candidate in \
+    "Apple Development: William Kronmiller (BL2D669Y94)" \
     "Developer ID Application: Peter Steinberger (Y5PE65HELJ)" \
     "CodexBar Development"
   do
