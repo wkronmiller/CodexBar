@@ -1,6 +1,9 @@
 import AppKit
 import CodexBarCore
+import OSLog
 import SwiftUI
+
+private let menuCardLogger = Logger(subsystem: "com.steipete.codexbar", category: "MenuCardView")
 
 /// SwiftUI card used inside the NSMenu to mirror Apple's rich menu panels.
 struct UsageMenuCardView: View {
@@ -75,6 +78,27 @@ struct UsageMenuCardView: View {
         let tokenUsage: TokenUsageSection?
         let placeholder: String?
         let progressColor: Color
+
+        var isOutOfCapacity: Bool {
+            let primaryOut = Self.isOutOfCapacity(metric: self.metric(withID: "primary"))
+            let secondaryOut = Self.isOutOfCapacity(metric: self.metric(withID: "secondary"))
+            return primaryOut || secondaryOut
+        }
+
+        private func metric(withID id: String) -> Metric? {
+            self.metrics.first { $0.id == id }
+        }
+
+        private static func isOutOfCapacity(metric: Metric?) -> Bool {
+            guard let metric else { return false }
+            let exhaustionThreshold = 0.5
+            switch metric.percentStyle {
+            case .left:
+                return metric.percent <= exhaustionThreshold
+            case .used:
+                return metric.percent >= (100 - exhaustionThreshold)
+            }
+        }
     }
 
     let model: Model
@@ -174,6 +198,7 @@ struct UsageMenuCardView: View {
         .padding(.top, 2)
         .padding(.bottom, 2)
         .frame(width: self.width, alignment: .leading)
+        .outOfCapacityDimmed(isDimmed: self.model.isOutOfCapacity)
     }
 
     private var hasDetails: Bool {
@@ -642,7 +667,7 @@ extension UsageMenuCardView.Model {
         let redacted = Self.redactedText(input: input, subtitle: subtitle)
         let placeholder = input.snapshot == nil && !input.isRefreshing && input.lastError == nil ? "No usage yet" : nil
 
-        return UsageMenuCardView.Model(
+        let model = UsageMenuCardView.Model(
             providerName: input.metadata.displayName,
             email: redacted.email,
             subtitleText: redacted.subtitleText,
@@ -657,6 +682,22 @@ extension UsageMenuCardView.Model {
             tokenUsage: tokenUsage,
             placeholder: placeholder,
             progressColor: Self.progressColor(for: input.provider))
+        let primaryMetric = metrics.first { $0.id == "primary" }
+        let secondaryMetric = metrics.first { $0.id == "secondary" }
+        let providerName = String(describing: input.provider)
+        let primaryDescription = Self.metricDescription(primaryMetric)
+        let secondaryDescription = Self.metricDescription(secondaryMetric)
+        let isOutOfCapacity = model.isOutOfCapacity
+        menuCardLogger.debug(
+            "Menu card metrics provider=\(providerName, privacy: .public) isOut=\(isOutOfCapacity, privacy: .public)")
+        menuCardLogger.debug(
+            "Menu card metrics primary=\(primaryDescription, privacy: .public) secondary=\(secondaryDescription, privacy: .public)")
+        return model
+    }
+
+    private static func metricDescription(_ metric: UsageMenuCardView.Model.Metric?) -> String {
+        guard let metric else { return "nil" }
+        return String(format: "%.2f %@", metric.percent, metric.percentStyle.rawValue)
     }
 
     private static func email(
@@ -958,12 +999,22 @@ extension UsageMenuCardView.Model {
         return Color(red: color.red, green: color.green, blue: color.blue)
     }
 
+
     private static func resetText(
         for window: RateWindow,
         style: ResetTimeDisplayStyle,
         now: Date) -> String?
     {
         UsageFormatter.resetLine(for: window, style: style, now: now)
+    }
+}
+
+private extension View {
+    func outOfCapacityDimmed(isDimmed: Bool) -> some View {
+        self
+            .compositingGroup()
+            .grayscale(isDimmed ? 1 : 0)
+            .opacity(isDimmed ? 0.55 : 1)
     }
 }
 

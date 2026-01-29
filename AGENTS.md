@@ -24,6 +24,11 @@ CodexBar is a Swift 6 macOS menu bar app that monitors AI service usage/credits 
 swift build                    # debug
 swift build -c release         # release
 
+# Build with Xcode (Swift Package Manager)
+xcodebuild -scheme <SchemeName> -configuration Debug -destination 'platform=macOS' build
+xcodebuild -scheme CodexBarClaudeWebProbe -configuration Debug -destination 'platform=macOS' build
+# Available schemes: CodexBar, CodexBar-Package, CodexBarClaudeWatchdog, CodexBarClaudeWebProbe, CodexBarCLI, CodexBarWidget
+
 # Test
 swift test                     # run all tests
 swift test --filter ClassName  # run specific test suite

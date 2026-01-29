@@ -12,6 +12,7 @@ struct CodexBarUsageWidgetView: View {
             Color.black.opacity(0.02)
             if let providerEntry {
                 self.content(providerEntry: providerEntry)
+                    .outOfCapacityDimmed(providerEntry)
             } else {
                 self.emptyState
             }
@@ -54,6 +55,7 @@ struct CodexBarHistoryWidgetView: View {
             Color.black.opacity(0.02)
             if let providerEntry {
                 HistoryView(entry: providerEntry, isLarge: self.family == .systemLarge)
+                    .outOfCapacityDimmed(providerEntry)
             } else {
                 self.emptyState
             }
@@ -83,6 +85,7 @@ struct CodexBarCompactWidgetView: View {
             Color.black.opacity(0.02)
             if let providerEntry {
                 CompactMetricView(entry: providerEntry, metric: self.entry.metric)
+                    .outOfCapacityDimmed(providerEntry)
             } else {
                 self.emptyState
             }
@@ -125,6 +128,7 @@ struct CodexBarSwitcherWidgetView: View {
                 }
             }
             .padding(12)
+            .outOfCapacityDimmed(isDimmed: providerEntry?.isOutOfCapacity ?? false)
         }
         .containerBackground(.fill.tertiary, for: .widget)
     }
@@ -563,6 +567,31 @@ private struct UsageHistoryChart: View {
                     .animation(.easeOut(duration: 0.2), value: height)
             }
         }
+    }
+}
+
+private extension WidgetSnapshot.ProviderEntry {
+    var isOutOfCapacity: Bool {
+        let exhaustionThreshold = 0.5
+        let primaryEmpty = self.primary.map { $0.remainingPercent <= exhaustionThreshold } ?? false
+        let secondaryEmpty = self.secondary.map { $0.remainingPercent <= exhaustionThreshold } ?? false
+        let creditsEmpty = self.provider == .codex
+            ? (self.creditsRemaining.map { $0 <= 0 } ?? false)
+            : false
+        return primaryEmpty || secondaryEmpty || creditsEmpty
+    }
+}
+
+private extension View {
+    func outOfCapacityDimmed(isDimmed: Bool) -> some View {
+        self
+            .compositingGroup()
+            .grayscale(isDimmed ? 1 : 0)
+            .opacity(isDimmed ? 0.55 : 1)
+    }
+
+    func outOfCapacityDimmed(_ entry: WidgetSnapshot.ProviderEntry) -> some View {
+        self.outOfCapacityDimmed(isDimmed: entry.isOutOfCapacity)
     }
 }
 
