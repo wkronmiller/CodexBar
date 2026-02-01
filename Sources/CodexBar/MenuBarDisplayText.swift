@@ -24,7 +24,7 @@ enum MenuBarDisplayText {
 
     static func paceText(provider: UsageProvider, window: RateWindow?, now: Date = .init()) -> String? {
         guard let window else { return nil }
-        guard let pace = UsagePaceText.weeklyPace(provider: provider, window: window, now: now) else { return nil }
+        guard let pace = UsagePaceText.pace(provider: provider, window: window, now: now) else { return nil }
         let deltaValue = Int(abs(pace.deltaPercent).rounded())
         let sign = pace.deltaPercent >= 0 ? "+" : "-"
         return "\(sign)\(deltaValue)%"
@@ -42,10 +42,14 @@ enum MenuBarDisplayText {
         case .percent:
             return self.percentText(window: percentWindow, showUsed: showUsed)
         case .pace:
-            return self.paceText(provider: provider, window: paceWindow, now: now)
+            return self.paceText(provider: provider, window: paceWindow ?? percentWindow, now: now)
         case .both:
             guard let percent = percentText(window: percentWindow, showUsed: showUsed) else { return nil }
-            guard let pace = Self.paceText(provider: provider, window: paceWindow, now: now) else { return nil }
+            guard let pace = Self.paceText(
+                provider: provider,
+                window: paceWindow ?? percentWindow,
+                now: now)
+            else { return nil }
             return "\(percent) · \(pace)"
         }
     }
@@ -59,15 +63,16 @@ enum MenuBarDisplayText {
         showUsed: Bool,
         now: Date = .init()) -> String?
     {
+        let paceWindow = secondary ?? primary
         switch mode {
         case .percent:
             return self.dualPercentText(primary: primary, secondary: secondary, showUsed: showUsed)
         case .pace:
-            return self.paceText(provider: provider, window: secondary, now: now)
+            return self.paceText(provider: provider, window: paceWindow, now: now)
         case .both:
             guard let percent = self.dualPercentText(primary: primary, secondary: secondary, showUsed: showUsed)
             else { return nil }
-            guard let pace = Self.paceText(provider: provider, window: secondary, now: now) else { return nil }
+            guard let pace = Self.paceText(provider: provider, window: paceWindow, now: now) else { return nil }
             return "\(percent) · \(pace)"
         }
     }

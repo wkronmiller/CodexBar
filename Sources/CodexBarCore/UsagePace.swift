@@ -18,14 +18,14 @@ public struct UsagePace: Sendable {
     public let etaSeconds: TimeInterval?
     public let willLastToReset: Bool
 
-    public static func weekly(
+    public static func forWindow(
         window: RateWindow,
         now: Date = .init(),
-        defaultWindowMinutes: Int = 10080) -> UsagePace?
+        defaultWindowMinutes: Int? = nil) -> UsagePace?
     {
         guard let resetsAt = window.resetsAt else { return nil }
         let minutes = window.windowMinutes ?? defaultWindowMinutes
-        guard minutes > 0 else { return nil }
+        guard let minutes, minutes > 0 else { return nil }
 
         let duration = TimeInterval(minutes) * 60
         let timeUntilReset = resetsAt.timeIntervalSince(now)
@@ -65,6 +65,14 @@ public struct UsagePace: Sendable {
             actualUsedPercent: actual,
             etaSeconds: etaSeconds,
             willLastToReset: willLastToReset)
+    }
+
+    public static func weekly(
+        window: RateWindow,
+        now: Date = .init(),
+        defaultWindowMinutes: Int = 10080) -> UsagePace?
+    {
+        self.forWindow(window: window, now: now, defaultWindowMinutes: defaultWindowMinutes)
     }
 
     private static func stage(for delta: Double) -> Stage {

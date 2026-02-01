@@ -243,14 +243,14 @@ struct StatusItemAnimationTests {
 
         let pace = MenuBarDisplayText.displayText(
             mode: .pace,
-            provider: .gemini,
+            provider: .cursor,
             percentWindow: percentWindow,
             paceWindow: paceWindow,
             showUsed: true,
             now: now)
         let both = MenuBarDisplayText.displayText(
             mode: .both,
-            provider: .gemini,
+            provider: .cursor,
             percentWindow: percentWindow,
             paceWindow: paceWindow,
             showUsed: true,

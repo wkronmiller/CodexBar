@@ -121,9 +121,9 @@ enum CLIRenderer {
         useColor: Bool,
         now: Date) -> String?
     {
-        guard provider == .codex || provider == .claude else { return nil }
+        guard self.supportsPace(provider: provider) else { return nil }
         guard window.remainingPercent > 0 else { return nil }
-        guard let pace = UsagePace.weekly(window: window, now: now, defaultWindowMinutes: 10080) else { return nil }
+        guard let pace = UsagePace.forWindow(window: window, now: now) else { return nil }
         guard pace.expectedUsedPercent >= Self.paceMinimumExpectedPercent else { return nil }
 
         let expected = Int(pace.expectedUsedPercent.rounded())
@@ -135,6 +135,15 @@ enum CLIRenderer {
         }
         let label = self.label("Pace", useColor: useColor)
         return "\(label): \(parts.joined(separator: " | "))"
+    }
+
+    private static func supportsPace(provider: UsageProvider) -> Bool {
+        switch provider {
+        case .codex, .claude, .opencode, .gemini:
+            true
+        default:
+            false
+        }
     }
 
     private static func paceLeftLabel(for pace: UsagePace) -> String {

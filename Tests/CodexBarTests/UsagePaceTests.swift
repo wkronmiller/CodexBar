@@ -44,6 +44,46 @@ struct UsagePaceTests {
     }
 
     @Test
+    func paceForWindow_computesHourlyDelta() {
+        let now = Date(timeIntervalSince1970: 0)
+        let window = RateWindow(
+            usedPercent: 60,
+            windowMinutes: 60,
+            resetsAt: now.addingTimeInterval(30 * 60),
+            resetDescription: nil)
+
+        let pace = UsagePace.forWindow(window: window, now: now)
+
+        #expect(pace != nil)
+        guard let pace else { return }
+        #expect(abs(pace.expectedUsedPercent - 50) < 0.01)
+        #expect(abs(pace.deltaPercent - 10) < 0.01)
+        #expect(pace.stage == .ahead)
+        #expect(pace.willLastToReset == false)
+        #expect(abs((pace.etaSeconds ?? 0) - (20 * 60)) < 1)
+    }
+
+    @Test
+    func paceForWindow_supportsDailyWindow() {
+        let now = Date(timeIntervalSince1970: 0)
+        let window = RateWindow(
+            usedPercent: 10,
+            windowMinutes: 1440,
+            resetsAt: now.addingTimeInterval(18 * 60 * 60),
+            resetDescription: nil)
+
+        let pace = UsagePace.forWindow(window: window, now: now)
+
+        #expect(pace != nil)
+        guard let pace else { return }
+        #expect(abs(pace.expectedUsedPercent - 25) < 0.01)
+        #expect(abs(pace.deltaPercent + 15) < 0.01)
+        #expect(pace.stage == .farBehind)
+        #expect(pace.willLastToReset == true)
+        #expect(pace.etaSeconds == nil)
+    }
+
+    @Test
     func weeklyPace_hidesWhenResetMissingOrOutsideWindow() {
         let now = Date(timeIntervalSince1970: 0)
         let missing = RateWindow(

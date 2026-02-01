@@ -121,6 +121,9 @@ struct MenuDescriptor {
                     window: primary,
                     resetStyle: resetStyle,
                     showUsed: settings.usageBarsShowUsed)
+                if let paceSummary = UsagePaceText.paceSummary(provider: provider, window: primary) {
+                    entries.append(.text(paceSummary, .secondary))
+                }
             }
             if let weekly = snap.secondary {
                 Self.appendRateWindow(
@@ -129,7 +132,7 @@ struct MenuDescriptor {
                     window: weekly,
                     resetStyle: resetStyle,
                     showUsed: settings.usageBarsShowUsed)
-                if let paceSummary = UsagePaceText.weeklySummary(provider: provider, window: weekly) {
+                if let paceSummary = UsagePaceText.paceSummary(provider: provider, window: weekly) {
                     entries.append(.text(paceSummary, .secondary))
                 }
             }

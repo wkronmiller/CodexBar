@@ -2,7 +2,7 @@ import CodexBarCore
 import Foundation
 
 enum UsagePaceText {
-    struct WeeklyDetail: Sendable {
+    struct PaceDetail: Sendable {
         let leftLabel: String
         let rightLabel: String?
         let expectedUsedPercent: Double
@@ -11,17 +11,17 @@ enum UsagePaceText {
 
     private static let minimumExpectedPercent: Double = 3
 
-    static func weeklySummary(provider: UsageProvider, window: RateWindow, now: Date = .init()) -> String? {
-        guard let detail = weeklyDetail(provider: provider, window: window, now: now) else { return nil }
+    static func paceSummary(provider: UsageProvider, window: RateWindow, now: Date = .init()) -> String? {
+        guard let detail = paceDetail(provider: provider, window: window, now: now) else { return nil }
         if let rightLabel = detail.rightLabel {
             return "Pace: \(detail.leftLabel) · \(rightLabel)"
         }
         return "Pace: \(detail.leftLabel)"
     }
 
-    static func weeklyDetail(provider: UsageProvider, window: RateWindow, now: Date = .init()) -> WeeklyDetail? {
-        guard let pace = weeklyPace(provider: provider, window: window, now: now) else { return nil }
-        return WeeklyDetail(
+    static func paceDetail(provider: UsageProvider, window: RateWindow, now: Date = .init()) -> PaceDetail? {
+        guard let pace = pace(provider: provider, window: window, now: now) else { return nil }
+        return PaceDetail(
             leftLabel: Self.detailLeftLabel(for: pace),
             rightLabel: Self.detailRightLabel(for: pace, now: now),
             expectedUsedPercent: pace.expectedUsedPercent,
@@ -56,11 +56,32 @@ enum UsagePaceText {
         return countdown
     }
 
-    static func weeklyPace(provider: UsageProvider, window: RateWindow, now: Date) -> UsagePace? {
-        guard provider == .codex || provider == .claude || provider == .opencode else { return nil }
+    static func pace(provider: UsageProvider, window: RateWindow, now: Date) -> UsagePace? {
+        guard self.supportsPace(provider: provider) else { return nil }
         guard window.remainingPercent > 0 else { return nil }
-        guard let pace = UsagePace.weekly(window: window, now: now, defaultWindowMinutes: 10080) else { return nil }
+        guard let pace = UsagePace.forWindow(window: window, now: now) else { return nil }
         guard pace.expectedUsedPercent >= Self.minimumExpectedPercent else { return nil }
         return pace
+    }
+
+    private static func supportsPace(provider: UsageProvider) -> Bool {
+        switch provider {
+        case .codex, .claude, .opencode, .gemini:
+            true
+        default:
+            false
+        }
+    }
+
+    static func weeklySummary(provider: UsageProvider, window: RateWindow, now: Date = .init()) -> String? {
+        self.paceSummary(provider: provider, window: window, now: now)
+    }
+
+    static func weeklyDetail(provider: UsageProvider, window: RateWindow, now: Date = .init()) -> PaceDetail? {
+        self.paceDetail(provider: provider, window: window, now: now)
+    }
+
+    static func weeklyPace(provider: UsageProvider, window: RateWindow, now: Date) -> UsagePace? {
+        self.pace(provider: provider, window: window, now: now)
     }
 }

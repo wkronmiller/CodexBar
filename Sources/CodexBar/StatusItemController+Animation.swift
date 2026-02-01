@@ -349,6 +349,7 @@ extension StatusItemController {
         let useDual = preference == .dual
             || (preference == .automatic && provider != .gemini
                 && snapshot?.primary != nil && snapshot?.secondary != nil)
+        let percentWindow = self.menuBarPercentWindow(for: provider, snapshot: snapshot)
         if useDual {
             return MenuBarDisplayText.displayTextDual(
                 mode: self.settings.menuBarDisplayMode,
@@ -360,8 +361,8 @@ extension StatusItemController {
         return MenuBarDisplayText.displayText(
             mode: self.settings.menuBarDisplayMode,
             provider: provider,
-            percentWindow: self.menuBarPercentWindow(for: provider, snapshot: snapshot),
-            paceWindow: snapshot?.secondary,
+            percentWindow: percentWindow,
+            paceWindow: percentWindow,
             showUsed: self.settings.usageBarsShowUsed)
     }
 

@@ -785,6 +785,11 @@ extension UsageMenuCardView.Model {
         let zaiTokenDetail = Self.zaiLimitDetailText(limit: zaiUsage?.tokenLimit)
         let zaiTimeDetail = Self.zaiLimitDetailText(limit: zaiUsage?.timeLimit)
         if let primary = snapshot.primary {
+            let paceDetail = Self.paceDetail(
+                provider: input.provider,
+                window: primary,
+                now: input.now,
+                showUsed: input.usageBarsShowUsed)
             metrics.append(Metric(
                 id: "primary",
                 title: input.metadata.sessionLabel,
@@ -793,13 +798,13 @@ extension UsageMenuCardView.Model {
                 percentStyle: percentStyle,
                 resetText: Self.resetText(for: primary, style: input.resetTimeDisplayStyle, now: input.now),
                 detailText: input.provider == .zai ? zaiTokenDetail : nil,
-                detailLeftText: nil,
-                detailRightText: nil,
-                pacePercent: nil,
-                paceOnTop: true))
+                detailLeftText: paceDetail?.leftLabel,
+                detailRightText: paceDetail?.rightLabel,
+                pacePercent: paceDetail?.pacePercent,
+                paceOnTop: paceDetail?.paceOnTop ?? true))
         }
         if let weekly = snapshot.secondary {
-            let paceDetail = Self.weeklyPaceDetail(
+            let paceDetail = Self.paceDetail(
                 provider: input.provider,
                 window: weekly,
                 now: input.now,
@@ -862,13 +867,13 @@ extension UsageMenuCardView.Model {
         let paceOnTop: Bool
     }
 
-    private static func weeklyPaceDetail(
+    private static func paceDetail(
         provider: UsageProvider,
         window: RateWindow,
         now: Date,
         showUsed: Bool) -> PaceDetail?
     {
-        guard let detail = UsagePaceText.weeklyDetail(provider: provider, window: window, now: now) else { return nil }
+        guard let detail = UsagePaceText.paceDetail(provider: provider, window: window, now: now) else { return nil }
         let expectedUsed = detail.expectedUsedPercent
         let actualUsed = window.usedPercent
         let expectedPercent = showUsed ? expectedUsed : (100 - expectedUsed)
