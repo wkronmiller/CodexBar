@@ -21,6 +21,9 @@ enum CLIRenderer {
 
         if let primary = snapshot.primary {
             lines.append(self.rateLine(title: meta.sessionLabel, window: primary, useColor: context.useColor))
+            if let pace = self.paceLine(provider: provider, window: primary, useColor: context.useColor, now: now) {
+                lines.append(pace)
+            }
             if let reset = self.resetLine(for: primary, style: context.resetStyle, now: now) {
                 lines.append(self.subtleLine(reset, useColor: context.useColor))
             }
