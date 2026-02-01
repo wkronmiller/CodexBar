@@ -105,11 +105,6 @@ struct UsageMenuCardView: View {
     let width: CGFloat
     @Environment(\.menuItemHighlighted) private var isHighlighted
 
-    init(model: Model, width: CGFloat) {
-        self.model = model
-        self.width = width
-    }
-
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             UsageMenuCardHeaderView(model: self.model)
@@ -451,20 +446,6 @@ struct UsageMenuCardCreditsSectionView: View {
     let bottomPadding: CGFloat
     let width: CGFloat
 
-    init(
-        model: UsageMenuCardView.Model,
-        showBottomDivider: Bool,
-        topPadding: CGFloat,
-        bottomPadding: CGFloat,
-        width: CGFloat)
-    {
-        self.model = model
-        self.showBottomDivider = showBottomDivider
-        self.topPadding = topPadding
-        self.bottomPadding = bottomPadding
-        self.width = width
-    }
-
     var body: some View {
         if let credits = self.model.creditsText {
             VStack(alignment: .leading, spacing: 6) {
@@ -690,8 +671,9 @@ extension UsageMenuCardView.Model {
         let isOutOfCapacity = model.isOutOfCapacity
         menuCardLogger.debug(
             "Menu card metrics provider=\(providerName, privacy: .public) isOut=\(isOutOfCapacity, privacy: .public)")
-        menuCardLogger.debug(
-            "Menu card metrics primary=\(primaryDescription, privacy: .public) secondary=\(secondaryDescription, privacy: .public)")
+        let pri = primaryDescription
+        let sec = secondaryDescription
+        menuCardLogger.debug("Menu card metrics primary=\(pri, privacy: .public) secondary=\(sec, privacy: .public)")
         return model
     }
 
@@ -999,7 +981,6 @@ extension UsageMenuCardView.Model {
         return Color(red: color.red, green: color.green, blue: color.blue)
     }
 
-
     private static func resetText(
         for window: RateWindow,
         style: ResetTimeDisplayStyle,
@@ -1009,8 +990,8 @@ extension UsageMenuCardView.Model {
     }
 }
 
-private extension View {
-    func outOfCapacityDimmed(isDimmed: Bool) -> some View {
+extension View {
+    fileprivate func outOfCapacityDimmed(isDimmed: Bool) -> some View {
         self
             .compositingGroup()
             .grayscale(isDimmed ? 1 : 0)
@@ -1046,7 +1027,9 @@ private final class ClickToCopyView: NSView {
         fatalError("init(coder:) has not been implemented")
     }
 
-    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool {
+        true
+    }
 
     override func mouseDown(with event: NSEvent) {
         _ = event

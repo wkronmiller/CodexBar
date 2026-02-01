@@ -570,8 +570,8 @@ private struct UsageHistoryChart: View {
     }
 }
 
-private extension WidgetSnapshot.ProviderEntry {
-    var isOutOfCapacity: Bool {
+extension WidgetSnapshot.ProviderEntry {
+    fileprivate var isOutOfCapacity: Bool {
         let exhaustionThreshold = 0.5
         let primaryEmpty = self.primary.map { $0.remainingPercent <= exhaustionThreshold } ?? false
         let secondaryEmpty = self.secondary.map { $0.remainingPercent <= exhaustionThreshold } ?? false
@@ -582,15 +582,15 @@ private extension WidgetSnapshot.ProviderEntry {
     }
 }
 
-private extension View {
-    func outOfCapacityDimmed(isDimmed: Bool) -> some View {
+extension View {
+    fileprivate func outOfCapacityDimmed(isDimmed: Bool) -> some View {
         self
             .compositingGroup()
             .grayscale(isDimmed ? 1 : 0)
             .opacity(isDimmed ? 0.55 : 1)
     }
 
-    func outOfCapacityDimmed(_ entry: WidgetSnapshot.ProviderEntry) -> some View {
+    fileprivate func outOfCapacityDimmed(_ entry: WidgetSnapshot.ProviderEntry) -> some View {
         self.outOfCapacityDimmed(isDimmed: entry.isOutOfCapacity)
     }
 }
