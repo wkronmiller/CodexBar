@@ -167,6 +167,7 @@ final class UsageStore {
     @ObservationIgnored private var lastOpenAIDashboardTargetEmail: String?
     @ObservationIgnored private var lastOpenAIDashboardCookieImportAttemptAt: Date?
     @ObservationIgnored private var lastOpenAIDashboardCookieImportEmail: String?
+    @ObservationIgnored var codexTertiaryFromOpenAIWeb: Bool = false
     @ObservationIgnored private var openAIWebAccountDidChange: Bool = false
 
     @ObservationIgnored let codexFetcher: UsageFetcher
@@ -689,13 +690,50 @@ extension UsageStore {
             self.lastOpenAIDashboardSnapshot = dash
             self.openAIDashboardRequiresLogin = false
             // Only fill gaps; OAuth/CLI remain the primary sources for usage + credits.
-            if self.snapshots[.codex] == nil,
-               let usage = dash.toUsageSnapshot(provider: .codex, accountEmail: targetEmail)
-            {
-                self.snapshots[.codex] = usage
-                self.errors[.codex] = nil
-                self.failureGates[.codex]?.recordSuccess()
-                self.lastSourceLabels[.codex] = "openai-web"
+            if let existing = self.snapshots[.codex] {
+                if let dashboardTertiary = dash.tertiaryLimit {
+                    let canMergeDashboardTertiary = existing.tertiary == nil || self.codexTertiaryFromOpenAIWeb
+                    if canMergeDashboardTertiary {
+                        if existing.tertiary != dashboardTertiary {
+                            let mergedUpdatedAt = existing.updatedAt > dash.updatedAt ? existing.updatedAt : dash.updatedAt
+                            self.snapshots[.codex] = UsageSnapshot(
+                                primary: existing.primary,
+                                secondary: existing.secondary,
+                                tertiary: dashboardTertiary,
+                                providerCost: existing.providerCost,
+                                zaiUsage: existing.zaiUsage,
+                                minimaxUsage: existing.minimaxUsage,
+                                cursorRequests: existing.cursorRequests,
+                                updatedAt: mergedUpdatedAt,
+                                identity: existing.identity)
+                        }
+                        self.codexTertiaryFromOpenAIWeb = true
+                    }
+                } else if self.codexTertiaryFromOpenAIWeb {
+                    if existing.tertiary != nil {
+                        self.snapshots[.codex] = UsageSnapshot(
+                            primary: existing.primary,
+                            secondary: existing.secondary,
+                            tertiary: nil,
+                            providerCost: existing.providerCost,
+                            zaiUsage: existing.zaiUsage,
+                            minimaxUsage: existing.minimaxUsage,
+                            cursorRequests: existing.cursorRequests,
+                            updatedAt: existing.updatedAt,
+                            identity: existing.identity)
+                    }
+                    self.codexTertiaryFromOpenAIWeb = false
+                }
+            } else {
+                if let usage = dash.toUsageSnapshot(provider: .codex, accountEmail: targetEmail) {
+                    self.snapshots[.codex] = usage
+                    self.errors[.codex] = nil
+                    self.failureGates[.codex]?.recordSuccess()
+                    self.lastSourceLabels[.codex] = "openai-web"
+                    self.codexTertiaryFromOpenAIWeb = usage.tertiary != nil
+                } else {
+                    self.codexTertiaryFromOpenAIWeb = false
+                }
             }
             if self.credits == nil, let credits = dash.toCreditsSnapshot() {
                 self.credits = credits
@@ -709,6 +747,12 @@ extension UsageStore {
             OpenAIDashboardCacheStore.save(OpenAIDashboardCache(accountEmail: email, snapshot: dash))
         }
     }
+
+    #if DEBUG
+    func _applyOpenAIDashboardForTesting(_ dash: OpenAIDashboardSnapshot, targetEmail: String?) async {
+        await self.applyOpenAIDashboard(dash, targetEmail: targetEmail)
+    }
+    #endif
 
     private func applyOpenAIDashboardFailure(message: String) async {
         await MainActor.run {
@@ -890,6 +934,7 @@ extension UsageStore {
             self.openAIDashboard = nil
             self.lastOpenAIDashboardSnapshot = nil
             self.lastOpenAIDashboardError = nil
+            self.codexTertiaryFromOpenAIWeb = false
             self.openAIDashboardRequiresLogin = true
             self.openAIDashboardCookieImportStatus = "Codex account changed; importing browser cookies…"
             self.lastOpenAIDashboardCookieImportAttemptAt = nil
@@ -1072,6 +1117,7 @@ extension UsageStore {
         self.lastOpenAIDashboardError = nil
         self.lastOpenAIDashboardSnapshot = nil
         self.lastOpenAIDashboardTargetEmail = nil
+        self.codexTertiaryFromOpenAIWeb = false
         self.openAIDashboardRequiresLogin = false
         self.openAIDashboardCookieImportStatus = nil
         self.openAIDashboardCookieImportDebugLog = nil

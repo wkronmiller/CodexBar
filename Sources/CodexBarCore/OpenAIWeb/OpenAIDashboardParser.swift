@@ -88,7 +88,7 @@ public enum OpenAIDashboardParser {
 
     public static func parseRateLimits(
         bodyText: String,
-        now: Date = .init()) -> (primary: RateWindow?, secondary: RateWindow?)
+        now: Date = .init()) -> (primary: RateWindow?, secondary: RateWindow?, tertiary: RateWindow?)
     {
         let cleaned = bodyText.replacingOccurrences(of: "\r", with: "\n")
         let lines = cleaned
@@ -106,7 +106,12 @@ public enum OpenAIDashboardParser {
             match: self.isWeeklyLimitLine,
             windowMinutes: 7 * 24 * 60,
             now: now)
-        return (primary, secondary)
+        let tertiary = self.parseRateWindow(
+            lines: lines,
+            match: self.isSparkLimitLine,
+            windowMinutes: 7 * 24 * 60,
+            now: now)
+        return (primary, secondary, tertiary)
     }
 
     public static func parsePlanFromHTML(html: String) -> String? {
@@ -285,11 +290,20 @@ public enum OpenAIDashboardParser {
 
     private static func isWeeklyLimitLine(_ line: String) -> Bool {
         let lower = line.lowercased()
+        guard !self.isSparkLimitLine(line) else { return false }
         if lower.contains("weekly") { return true }
         if lower.contains("7-day") { return true }
         if lower.contains("7 day") { return true }
         if lower.contains("7d") { return true }
         return false
+    }
+
+    private static func isSparkLimitLine(_ line: String) -> Bool {
+        let lower = line.lowercased()
+        guard lower.contains("spark") else { return false }
+        if lower.contains("limit") || lower.contains("quota") { return true }
+        if lower.contains("remaining") || lower.contains("left") { return true }
+        return lower.contains("%")
     }
 
     private static func parseResetDate(from line: String, now: Date) -> Date? {

@@ -69,6 +69,9 @@ extension UsageStore {
             await MainActor.run {
                 self.handleSessionQuotaTransition(provider: provider, snapshot: scoped)
                 self.snapshots[provider] = scoped
+                if provider == .codex {
+                    self.codexTertiaryFromOpenAIWeb = false
+                }
                 self.lastSourceLabels[provider] = result.sourceLabel
                 self.errors[provider] = nil
                 self.failureGates[provider]?.recordSuccess()

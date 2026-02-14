@@ -60,6 +60,27 @@ struct OpenAIDashboardParserTests {
     }
 
     @Test
+    func parsesRateLimitsWithSparkQuota() {
+        let body = """
+        Usage limits
+        5h limit
+        72% remaining
+        Resets today at 2:15 PM
+        Weekly limit
+        41% remaining
+        Resets Fri at 9:00 AM
+        GPT-5.3 Codex Spark quota
+        35% remaining
+        Resets Thu at 9:00 AM
+        """
+        let limits = OpenAIDashboardParser.parseRateLimits(bodyText: body)
+        #expect(abs((limits.primary?.usedPercent ?? 0) - 28) < 0.001)
+        #expect(abs((limits.secondary?.usedPercent ?? 0) - 59) < 0.001)
+        #expect(abs((limits.tertiary?.usedPercent ?? 0) - 65) < 0.001)
+        #expect(limits.tertiary?.windowMinutes == 10080)
+    }
+
+    @Test
     func parsesPlanFromClientBootstrap() {
         let html = """
         <html>

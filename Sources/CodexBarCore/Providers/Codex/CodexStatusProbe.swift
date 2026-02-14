@@ -4,23 +4,29 @@ public struct CodexStatusSnapshot: Sendable {
     public let credits: Double?
     public let fiveHourPercentLeft: Int?
     public let weeklyPercentLeft: Int?
+    public let sparkPercentLeft: Int?
     public let fiveHourResetDescription: String?
     public let weeklyResetDescription: String?
+    public let sparkResetDescription: String?
     public let rawText: String
 
     public init(
         credits: Double?,
         fiveHourPercentLeft: Int?,
         weeklyPercentLeft: Int?,
+        sparkPercentLeft: Int?,
         fiveHourResetDescription: String?,
         weeklyResetDescription: String?,
+        sparkResetDescription: String?,
         rawText: String)
     {
         self.credits = credits
         self.fiveHourPercentLeft = fiveHourPercentLeft
         self.weeklyPercentLeft = weeklyPercentLeft
+        self.sparkPercentLeft = sparkPercentLeft
         self.fiveHourResetDescription = fiveHourResetDescription
         self.weeklyResetDescription = weeklyResetDescription
+        self.sparkResetDescription = sparkResetDescription
         self.rawText = rawText
     }
 }
@@ -96,22 +102,33 @@ public struct CodexStatusProbe {
                 "Run `bun install -g @openai/codex` to continue (update prompt blocking /status).")
         }
         let credits = TextParsing.firstNumber(pattern: #"Credits:\s*([0-9][0-9.,]*)"#, text: clean)
+        let lines = clean
+            .replacingOccurrences(of: "\r", with: "\n")
+            .split(whereSeparator: \.isNewline)
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+
         // Pull reset info from the same lines that contain the percentages.
-        let fiveLine = TextParsing.firstLine(matching: #"5h limit[^\n]*"#, text: clean)
-        let weekLine = TextParsing.firstLine(matching: #"Weekly limit[^\n]*"#, text: clean)
+        let fiveLine = lines.first(where: self.isFiveHourLimitLine)
+        let weekLine = lines.first(where: self.isWeeklyLimitLine)
+        let sparkLine = lines.first(where: self.isSparkLimitLine)
         let fivePct = fiveLine.flatMap(TextParsing.percentLeft(fromLine:))
         let weekPct = weekLine.flatMap(TextParsing.percentLeft(fromLine:))
+        let sparkPct = sparkLine.flatMap(TextParsing.percentLeft(fromLine:))
         let fiveReset = fiveLine.flatMap(TextParsing.resetString(fromLine:))
         let weekReset = weekLine.flatMap(TextParsing.resetString(fromLine:))
-        if credits == nil, fivePct == nil, weekPct == nil {
+        let sparkReset = sparkLine.flatMap(TextParsing.resetString(fromLine:))
+        if credits == nil, fivePct == nil, weekPct == nil, sparkPct == nil {
             throw CodexStatusProbeError.parseFailed(clean.prefix(400).description)
         }
         return CodexStatusSnapshot(
             credits: credits,
             fiveHourPercentLeft: fivePct,
             weeklyPercentLeft: weekPct,
+            sparkPercentLeft: sparkPct,
             fiveHourResetDescription: fiveReset,
             weeklyResetDescription: weekReset,
+            sparkResetDescription: sparkReset,
             rawText: clean)
     }
 
@@ -155,5 +172,31 @@ public struct CodexStatusProbe {
     private static func containsUpdatePrompt(_ text: String) -> Bool {
         let lower = text.lowercased()
         return lower.contains("update available") && lower.contains("codex")
+    }
+
+    private static func isFiveHourLimitLine(_ line: String) -> Bool {
+        let lower = line.lowercased()
+        if lower.contains("5h") { return true }
+        if lower.contains("5-hour") { return true }
+        if lower.contains("5 hour") { return true }
+        return false
+    }
+
+    private static func isSparkLimitLine(_ line: String) -> Bool {
+        let lower = line.lowercased()
+        guard lower.contains("spark") else { return false }
+        if lower.contains("limit") || lower.contains("quota") { return true }
+        if lower.contains("remaining") || lower.contains("left") { return true }
+        return lower.contains("%")
+    }
+
+    private static func isWeeklyLimitLine(_ line: String) -> Bool {
+        let lower = line.lowercased()
+        guard !self.isSparkLimitLine(line) else { return false }
+        if lower.contains("weekly") { return true }
+        if lower.contains("7-day") { return true }
+        if lower.contains("7 day") { return true }
+        if lower.contains("7d") { return true }
+        return false
     }
 }

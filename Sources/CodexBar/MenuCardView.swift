@@ -855,7 +855,10 @@ extension UsageMenuCardView.Model {
                 paceOnTop: true))
         }
 
-        if input.provider == .codex, let remaining = input.dashboard?.codeReviewRemainingPercent {
+        if input.provider == .codex,
+           snapshot.tertiary == nil,
+           let remaining = input.dashboard?.codeReviewRemainingPercent
+        {
             let percent = input.usageBarsShowUsed ? (100 - remaining) : remaining
             metrics.append(Metric(
                 id: "code-review",

@@ -80,6 +80,11 @@ struct CodexOAuthTests {
               "used_percent": 43,
               "reset_at": 1767407914,
               "limit_window_seconds": 604800
+            },
+            "gpt_5_3_codex_spark_window": {
+              "used_percent": 12,
+              "reset_at": 1767407914,
+              "limit_window_seconds": 604800
             }
           }
         }
@@ -95,8 +100,11 @@ struct CodexOAuthTests {
         #expect(snapshot.primary?.windowMinutes == 300)
         #expect(snapshot.secondary?.usedPercent == 43)
         #expect(snapshot.secondary?.windowMinutes == 10080)
+        #expect(snapshot.tertiary?.usedPercent == 12)
+        #expect(snapshot.tertiary?.windowMinutes == 10080)
         #expect(snapshot.primary?.resetsAt != nil)
         #expect(snapshot.secondary?.resetsAt != nil)
+        #expect(snapshot.tertiary?.resetsAt != nil)
     }
 
     @Test

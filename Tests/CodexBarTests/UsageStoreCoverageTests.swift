@@ -72,6 +72,133 @@ struct UsageStoreCoverageTests {
     }
 
     @Test
+    func openAIDashboardMergesSparkMetricIntoExistingCodexSnapshot() async throws {
+        let settings = Self.makeSettingsStore(suite: "UsageStoreCoverageTests-openai-spark-merge")
+        let store = Self.makeUsageStore(settings: settings)
+        let now = Date()
+
+        store._setSnapshotForTesting(
+            UsageSnapshot(
+                primary: RateWindow(usedPercent: 14, windowMinutes: 300, resetsAt: nil, resetDescription: nil),
+                secondary: RateWindow(usedPercent: 8, windowMinutes: 10080, resetsAt: nil, resetDescription: nil),
+                tertiary: nil,
+                updatedAt: now),
+            provider: .codex)
+
+        let dashboard = OpenAIDashboardSnapshot(
+            signedInEmail: "user@example.com",
+            codeReviewRemainingPercent: nil,
+            creditEvents: [],
+            dailyBreakdown: [],
+            usageBreakdown: [],
+            creditsPurchaseURL: nil,
+            primaryLimit: nil,
+            secondaryLimit: nil,
+            tertiaryLimit: RateWindow(usedPercent: 65, windowMinutes: 10080, resetsAt: nil, resetDescription: nil),
+            creditsRemaining: nil,
+            accountPlan: nil,
+            updatedAt: now)
+
+        await store._applyOpenAIDashboardForTesting(dashboard, targetEmail: nil)
+
+        let snapshot = try #require(store.snapshot(for: .codex))
+        #expect(snapshot.primary?.usedPercent == 14)
+        #expect(snapshot.secondary?.usedPercent == 8)
+        #expect(snapshot.tertiary?.usedPercent == 65)
+
+        let updatedDashboard = OpenAIDashboardSnapshot(
+            signedInEmail: "user@example.com",
+            codeReviewRemainingPercent: nil,
+            creditEvents: [],
+            dailyBreakdown: [],
+            usageBreakdown: [],
+            creditsPurchaseURL: nil,
+            primaryLimit: nil,
+            secondaryLimit: nil,
+            tertiaryLimit: RateWindow(usedPercent: 40, windowMinutes: 10080, resetsAt: nil, resetDescription: nil),
+            creditsRemaining: nil,
+            accountPlan: nil,
+            updatedAt: now.addingTimeInterval(60))
+
+        await store._applyOpenAIDashboardForTesting(updatedDashboard, targetEmail: nil)
+
+        let refreshed = try #require(store.snapshot(for: .codex))
+        #expect(refreshed.tertiary?.usedPercent == 40)
+
+        let dashboardWithoutSpark = OpenAIDashboardSnapshot(
+            signedInEmail: "user@example.com",
+            codeReviewRemainingPercent: 73,
+            creditEvents: [],
+            dailyBreakdown: [],
+            usageBreakdown: [],
+            creditsPurchaseURL: nil,
+            primaryLimit: nil,
+            secondaryLimit: nil,
+            tertiaryLimit: nil,
+            creditsRemaining: nil,
+            accountPlan: nil,
+            updatedAt: now.addingTimeInterval(120))
+
+        await store._applyOpenAIDashboardForTesting(dashboardWithoutSpark, targetEmail: nil)
+
+        let cleared = try #require(store.snapshot(for: .codex))
+        #expect(cleared.tertiary == nil)
+    }
+
+    @Test
+    func openAIDashboardDoesNotOverridePrimarySourceSparkMetric() async throws {
+        let settings = Self.makeSettingsStore(suite: "UsageStoreCoverageTests-openai-spark-precedence")
+        let store = Self.makeUsageStore(settings: settings)
+        let now = Date()
+
+        store._setSnapshotForTesting(
+            UsageSnapshot(
+                primary: RateWindow(usedPercent: 14, windowMinutes: 300, resetsAt: nil, resetDescription: nil),
+                secondary: RateWindow(usedPercent: 8, windowMinutes: 10080, resetsAt: nil, resetDescription: nil),
+                tertiary: RateWindow(usedPercent: 22, windowMinutes: 10080, resetsAt: nil, resetDescription: nil),
+                updatedAt: now),
+            provider: .codex)
+
+        let dashboard = OpenAIDashboardSnapshot(
+            signedInEmail: "user@example.com",
+            codeReviewRemainingPercent: nil,
+            creditEvents: [],
+            dailyBreakdown: [],
+            usageBreakdown: [],
+            creditsPurchaseURL: nil,
+            primaryLimit: nil,
+            secondaryLimit: nil,
+            tertiaryLimit: RateWindow(usedPercent: 75, windowMinutes: 10080, resetsAt: nil, resetDescription: nil),
+            creditsRemaining: nil,
+            accountPlan: nil,
+            updatedAt: now.addingTimeInterval(60))
+
+        await store._applyOpenAIDashboardForTesting(dashboard, targetEmail: nil)
+
+        let merged = try #require(store.snapshot(for: .codex))
+        #expect(merged.tertiary?.usedPercent == 22)
+
+        let dashboardWithoutSpark = OpenAIDashboardSnapshot(
+            signedInEmail: "user@example.com",
+            codeReviewRemainingPercent: 73,
+            creditEvents: [],
+            dailyBreakdown: [],
+            usageBreakdown: [],
+            creditsPurchaseURL: nil,
+            primaryLimit: nil,
+            secondaryLimit: nil,
+            tertiaryLimit: nil,
+            creditsRemaining: nil,
+            accountPlan: nil,
+            updatedAt: now.addingTimeInterval(120))
+
+        await store._applyOpenAIDashboardForTesting(dashboardWithoutSpark, targetEmail: nil)
+
+        let stillPrimary = try #require(store.snapshot(for: .codex))
+        #expect(stillPrimary.tertiary?.usedPercent == 22)
+    }
+
+    @Test
     func providerAvailabilityAndSubscriptionDetection() {
         let zaiStore = InMemoryZaiTokenStore(value: "zai-token")
         let syntheticStore = InMemorySyntheticTokenStore(value: "synthetic-token")

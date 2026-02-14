@@ -259,7 +259,59 @@ private struct RPCRateLimitsResponse: Decodable, Encodable {
 private struct RPCRateLimitSnapshot: Decodable, Encodable {
     let primary: RPCRateLimitWindow?
     let secondary: RPCRateLimitWindow?
+    let tertiary: RPCRateLimitWindow?
     let credits: RPCCreditsSnapshot?
+
+    private enum CodingKeys: String, CodingKey {
+        case primary
+        case secondary
+        case tertiary
+        case credits
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.primary = try container.decodeIfPresent(RPCRateLimitWindow.self, forKey: .primary)
+        self.secondary = try container.decodeIfPresent(RPCRateLimitWindow.self, forKey: .secondary)
+        self.credits = try container.decodeIfPresent(RPCCreditsSnapshot.self, forKey: .credits)
+
+        if let direct = try container.decodeIfPresent(RPCRateLimitWindow.self, forKey: .tertiary) {
+            self.tertiary = direct
+        } else {
+            self.tertiary = Self.decodeSparkWindow(decoder: decoder)
+        }
+    }
+
+    private static func decodeSparkWindow(decoder: Decoder) -> RPCRateLimitWindow? {
+        guard let dynamic = try? decoder.container(keyedBy: RPCDynamicCodingKey.self) else { return nil }
+        let skipKeys: Set<String> = ["primary", "secondary", "tertiary", "credits"]
+
+        for key in dynamic.allKeys {
+            let lower = key.stringValue.lowercased()
+            if skipKeys.contains(lower) { continue }
+            guard lower.contains("spark") || lower.contains("gpt_5_3") else { continue }
+            guard lower.contains("window") || lower.contains("limit") else { continue }
+            if let window = try? dynamic.decode(RPCRateLimitWindow.self, forKey: key) {
+                return window
+            }
+        }
+        return nil
+    }
+}
+
+private struct RPCDynamicCodingKey: CodingKey {
+    let stringValue: String
+    let intValue: Int?
+
+    init?(stringValue: String) {
+        self.stringValue = stringValue
+        self.intValue = nil
+    }
+
+    init?(intValue: Int) {
+        self.stringValue = String(intValue)
+        self.intValue = intValue
+    }
 }
 
 private struct RPCRateLimitWindow: Decodable, Encodable {
@@ -525,11 +577,11 @@ public struct UsageFetcher: Sendable {
         let limits = try await rpc.fetchRateLimits().rateLimits
         let account = try? await rpc.fetchAccount()
 
-        guard let primary = Self.makeWindow(from: limits.primary),
-              let secondary = Self.makeWindow(from: limits.secondary)
-        else {
+        guard let primary = Self.makeWindow(from: limits.primary) else {
             throw UsageError.noRateLimitsFound
         }
+        let secondary = Self.makeWindow(from: limits.secondary)
+        let tertiary = Self.makeWindow(from: limits.tertiary)
 
         let identity = ProviderIdentitySnapshot(
             providerID: .codex,
@@ -543,14 +595,14 @@ public struct UsageFetcher: Sendable {
         return UsageSnapshot(
             primary: primary,
             secondary: secondary,
-            tertiary: nil,
+            tertiary: tertiary,
             updatedAt: Date(),
             identity: identity)
     }
 
     private func loadTTYUsage(keepCLISessionsAlive: Bool) async throws -> UsageSnapshot {
         let status = try await CodexStatusProbe(keepCLISessionsAlive: keepCLISessionsAlive).fetch()
-        guard let fiveLeft = status.fiveHourPercentLeft, let weekLeft = status.weeklyPercentLeft else {
+        guard let fiveLeft = status.fiveHourPercentLeft else {
             throw UsageError.noRateLimitsFound
         }
 
@@ -559,16 +611,25 @@ public struct UsageFetcher: Sendable {
             windowMinutes: 300,
             resetsAt: nil,
             resetDescription: status.fiveHourResetDescription)
-        let secondary = RateWindow(
-            usedPercent: max(0, 100 - Double(weekLeft)),
-            windowMinutes: 10080,
-            resetsAt: nil,
-            resetDescription: status.weeklyResetDescription)
+        let secondary: RateWindow? = status.weeklyPercentLeft.map { weekLeft in
+            RateWindow(
+                usedPercent: max(0, 100 - Double(weekLeft)),
+                windowMinutes: 10080,
+                resetsAt: nil,
+                resetDescription: status.weeklyResetDescription)
+        }
+        let tertiary: RateWindow? = status.sparkPercentLeft.map { sparkLeft in
+            RateWindow(
+                usedPercent: max(0, 100 - Double(sparkLeft)),
+                windowMinutes: 10080,
+                resetsAt: nil,
+                resetDescription: status.sparkResetDescription)
+        }
 
         return UsageSnapshot(
             primary: primary,
             secondary: secondary,
-            tertiary: nil,
+            tertiary: tertiary,
             updatedAt: Date(),
             identity: nil)
     }

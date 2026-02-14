@@ -12,8 +12,8 @@ public enum CodexProviderDescriptor {
                 displayName: "Codex",
                 sessionLabel: "Session",
                 weeklyLabel: "Weekly",
-                opusLabel: nil,
-                supportsOpus: false,
+                opusLabel: "GPT-5.3 Spark",
+                supportsOpus: true,
                 supportsCredits: true,
                 creditsHint: "Credits unavailable; keep Codex running to refresh.",
                 toggleTitle: "Show Codex usage",
@@ -164,6 +164,7 @@ struct CodexOAuthFetchStrategy: ProviderFetchStrategy {
     private static func mapUsage(_ response: CodexUsageResponse, credentials: CodexOAuthCredentials) -> UsageSnapshot {
         let primary = Self.makeWindow(response.rateLimit?.primaryWindow)
         let secondary = Self.makeWindow(response.rateLimit?.secondaryWindow)
+        let tertiary = Self.makeWindow(response.rateLimit?.tertiaryWindow)
 
         let identity = ProviderIdentitySnapshot(
             providerID: .codex,
@@ -174,7 +175,7 @@ struct CodexOAuthFetchStrategy: ProviderFetchStrategy {
         return UsageSnapshot(
             primary: primary ?? RateWindow(usedPercent: 0, windowMinutes: nil, resetsAt: nil, resetDescription: nil),
             secondary: secondary,
-            tertiary: nil,
+            tertiary: tertiary,
             updatedAt: Date(),
             identity: identity)
     }

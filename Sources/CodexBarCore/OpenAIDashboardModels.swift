@@ -12,6 +12,7 @@ public struct OpenAIDashboardSnapshot: Codable, Equatable, Sendable {
     public let creditsPurchaseURL: String?
     public let primaryLimit: RateWindow?
     public let secondaryLimit: RateWindow?
+    public let tertiaryLimit: RateWindow?
     public let creditsRemaining: Double?
     public let accountPlan: String?
     public let updatedAt: Date
@@ -25,6 +26,7 @@ public struct OpenAIDashboardSnapshot: Codable, Equatable, Sendable {
         creditsPurchaseURL: String?,
         primaryLimit: RateWindow? = nil,
         secondaryLimit: RateWindow? = nil,
+        tertiaryLimit: RateWindow? = nil,
         creditsRemaining: Double? = nil,
         accountPlan: String? = nil,
         updatedAt: Date)
@@ -37,6 +39,7 @@ public struct OpenAIDashboardSnapshot: Codable, Equatable, Sendable {
         self.creditsPurchaseURL = creditsPurchaseURL
         self.primaryLimit = primaryLimit
         self.secondaryLimit = secondaryLimit
+        self.tertiaryLimit = tertiaryLimit
         self.creditsRemaining = creditsRemaining
         self.accountPlan = accountPlan
         self.updatedAt = updatedAt
@@ -51,6 +54,7 @@ public struct OpenAIDashboardSnapshot: Codable, Equatable, Sendable {
         case creditsPurchaseURL
         case primaryLimit
         case secondaryLimit
+        case tertiaryLimit
         case creditsRemaining
         case accountPlan
         case updatedAt
@@ -73,6 +77,7 @@ public struct OpenAIDashboardSnapshot: Codable, Equatable, Sendable {
         self.creditsPurchaseURL = try container.decodeIfPresent(String.self, forKey: .creditsPurchaseURL)
         self.primaryLimit = try container.decodeIfPresent(RateWindow.self, forKey: .primaryLimit)
         self.secondaryLimit = try container.decodeIfPresent(RateWindow.self, forKey: .secondaryLimit)
+        self.tertiaryLimit = try container.decodeIfPresent(RateWindow.self, forKey: .tertiaryLimit)
         self.creditsRemaining = try container.decodeIfPresent(Double.self, forKey: .creditsRemaining)
         self.accountPlan = try container.decodeIfPresent(String.self, forKey: .accountPlan)
         self.updatedAt = try container.decode(Date.self, forKey: .updatedAt)
@@ -126,7 +131,7 @@ extension OpenAIDashboardSnapshot {
         return UsageSnapshot(
             primary: primaryLimit,
             secondary: self.secondaryLimit,
-            tertiary: nil,
+            tertiary: self.tertiaryLimit,
             providerCost: nil,
             updatedAt: self.updatedAt,
             identity: identity)

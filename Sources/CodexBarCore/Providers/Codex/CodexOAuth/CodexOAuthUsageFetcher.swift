@@ -75,10 +75,55 @@ public struct CodexUsageResponse: Decodable, Sendable {
     public struct RateLimitDetails: Decodable, Sendable {
         public let primaryWindow: WindowSnapshot?
         public let secondaryWindow: WindowSnapshot?
+        public let tertiaryWindow: WindowSnapshot?
 
         enum CodingKeys: String, CodingKey {
             case primaryWindow = "primary_window"
             case secondaryWindow = "secondary_window"
+            case tertiaryWindow = "tertiary_window"
+        }
+
+        public init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            self.primaryWindow = try container.decodeIfPresent(WindowSnapshot.self, forKey: .primaryWindow)
+            self.secondaryWindow = try container.decodeIfPresent(WindowSnapshot.self, forKey: .secondaryWindow)
+
+            if let direct = try container.decodeIfPresent(WindowSnapshot.self, forKey: .tertiaryWindow) {
+                self.tertiaryWindow = direct
+            } else {
+                self.tertiaryWindow = Self.decodeSparkWindow(decoder: decoder)
+            }
+        }
+
+        private static func decodeSparkWindow(decoder: Decoder) -> WindowSnapshot? {
+            guard let dynamic = try? decoder.container(keyedBy: AnyCodingKey.self) else { return nil }
+            let skipKeys: Set<String> = ["primary_window", "secondary_window", "tertiary_window"]
+
+            for key in dynamic.allKeys {
+                let lower = key.stringValue.lowercased()
+                if skipKeys.contains(lower) { continue }
+                guard lower.contains("spark") || lower.contains("gpt_5_3") else { continue }
+                guard lower.contains("window") || lower.contains("limit") else { continue }
+                if let window = try? dynamic.decode(WindowSnapshot.self, forKey: key) {
+                    return window
+                }
+            }
+            return nil
+        }
+    }
+
+    private struct AnyCodingKey: CodingKey {
+        let stringValue: String
+        let intValue: Int?
+
+        init?(stringValue: String) {
+            self.stringValue = stringValue
+            self.intValue = nil
+        }
+
+        init?(intValue: Int) {
+            self.stringValue = String(intValue)
+            self.intValue = intValue
         }
     }
 

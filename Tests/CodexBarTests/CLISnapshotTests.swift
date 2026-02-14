@@ -66,6 +66,29 @@ struct CLISnapshotTests {
     }
 
     @Test
+    func rendersTextSnapshotForCodexWithSparkQuota() {
+        let snap = UsageSnapshot(
+            primary: .init(usedPercent: 10, windowMinutes: 300, resetsAt: nil, resetDescription: nil),
+            secondary: .init(usedPercent: 25, windowMinutes: 10080, resetsAt: nil, resetDescription: nil),
+            tertiary: .init(usedPercent: 65, windowMinutes: 10080, resetsAt: nil, resetDescription: nil),
+            updatedAt: Date(timeIntervalSince1970: 0))
+
+        let output = CLIRenderer.renderText(
+            provider: .codex,
+            snapshot: snap,
+            credits: nil,
+            context: RenderContext(
+                header: "Codex 1.2.3 (codex-cli)",
+                status: nil,
+                useColor: false,
+                resetStyle: .absolute))
+
+        #expect(output.contains("Session: 90% left"))
+        #expect(output.contains("Weekly: 75% left"))
+        #expect(output.contains("GPT-5.3 Spark: 35% left"))
+    }
+
+    @Test
     func rendersWarpUnlimitedAsDetailNotReset() {
         let meta = ProviderDescriptorRegistry.descriptor(for: .warp).metadata
         let snap = UsageSnapshot(

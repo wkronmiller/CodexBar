@@ -174,6 +174,54 @@ struct MenuCardModelTests {
     }
 
     @Test
+    func codexSparkMetricReplacesCodeReviewWhenSparkIsAvailable() throws {
+        let now = Date()
+        let identity = ProviderIdentitySnapshot(
+            providerID: .codex,
+            accountEmail: "codex@example.com",
+            accountOrganization: nil,
+            loginMethod: nil)
+        let snapshot = UsageSnapshot(
+            primary: RateWindow(usedPercent: 14, windowMinutes: 300, resetsAt: nil, resetDescription: nil),
+            secondary: RateWindow(usedPercent: 8, windowMinutes: 10080, resetsAt: nil, resetDescription: nil),
+            tertiary: RateWindow(usedPercent: 65, windowMinutes: 10080, resetsAt: nil, resetDescription: nil),
+            updatedAt: now,
+            identity: identity)
+        let metadata = try #require(ProviderDefaults.metadata[.codex])
+
+        let dashboard = OpenAIDashboardSnapshot(
+            signedInEmail: "codex@example.com",
+            codeReviewRemainingPercent: 73,
+            creditEvents: [],
+            dailyBreakdown: [],
+            usageBreakdown: [],
+            creditsPurchaseURL: nil,
+            updatedAt: now)
+        let model = UsageMenuCardView.Model.make(.init(
+            provider: .codex,
+            metadata: metadata,
+            snapshot: snapshot,
+            credits: nil,
+            creditsError: nil,
+            dashboard: dashboard,
+            dashboardError: nil,
+            tokenSnapshot: nil,
+            tokenError: nil,
+            account: AccountInfo(email: "codex@example.com", plan: nil),
+            isRefreshing: false,
+            lastError: nil,
+            usageBarsShowUsed: false,
+            resetTimeDisplayStyle: .countdown,
+            tokenCostUsageEnabled: false,
+            showOptionalCreditsAndExtraUsage: true,
+            hidePersonalInfo: false,
+            now: now))
+
+        #expect(model.metrics.contains { $0.title == "GPT-5.3 Spark" && $0.percent == 35 })
+        #expect(!model.metrics.contains { $0.title == "Code review" })
+    }
+
+    @Test
     func claudeModelHidesWeeklyWhenUnavailable() throws {
         let now = Date()
         let identity = ProviderIdentitySnapshot(
