@@ -790,14 +790,25 @@ extension UsageMenuCardView.Model {
                 window: primary,
                 now: input.now,
                 showUsed: input.usageBarsShowUsed)
+            var primaryDetailText: String? = input.provider == .zai ? zaiTokenDetail : nil
+            var primaryResetText = Self.resetText(for: primary, style: input.resetTimeDisplayStyle, now: input.now)
+            if input.provider == .warp,
+               let detail = primary.resetDescription,
+               !detail.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            {
+                primaryDetailText = detail
+            }
+            if input.provider == .warp, primary.resetsAt == nil {
+                primaryResetText = nil
+            }
             metrics.append(Metric(
                 id: "primary",
                 title: input.metadata.sessionLabel,
                 percent: Self.clamped(
                     input.usageBarsShowUsed ? primary.usedPercent : primary.remainingPercent),
                 percentStyle: percentStyle,
-                resetText: Self.resetText(for: primary, style: input.resetTimeDisplayStyle, now: input.now),
-                detailText: input.provider == .zai ? zaiTokenDetail : nil,
+                resetText: primaryResetText,
+                detailText: primaryDetailText,
                 detailLeftText: paceDetail?.leftLabel,
                 detailRightText: paceDetail?.rightLabel,
                 pacePercent: paceDetail?.pacePercent,
@@ -809,13 +820,22 @@ extension UsageMenuCardView.Model {
                 window: weekly,
                 now: input.now,
                 showUsed: input.usageBarsShowUsed)
+            var weeklyResetText = Self.resetText(for: weekly, style: input.resetTimeDisplayStyle, now: input.now)
+            var weeklyDetailText: String? = input.provider == .zai ? zaiTimeDetail : nil
+            if input.provider == .warp,
+               let detail = weekly.resetDescription,
+               !detail.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            {
+                weeklyResetText = nil
+                weeklyDetailText = detail
+            }
             metrics.append(Metric(
                 id: "secondary",
                 title: input.metadata.weeklyLabel,
                 percent: Self.clamped(input.usageBarsShowUsed ? weekly.usedPercent : weekly.remainingPercent),
                 percentStyle: percentStyle,
-                resetText: Self.resetText(for: weekly, style: input.resetTimeDisplayStyle, now: input.now),
-                detailText: input.provider == .zai ? zaiTimeDetail : nil,
+                resetText: weeklyResetText,
+                detailText: weeklyDetailText,
                 detailLeftText: paceDetail?.leftLabel,
                 detailRightText: paceDetail?.rightLabel,
                 pacePercent: paceDetail?.pacePercent,
@@ -854,10 +874,18 @@ extension UsageMenuCardView.Model {
 
     private static func zaiLimitDetailText(limit: ZaiLimitEntry?) -> String? {
         guard let limit else { return nil }
-        let currentStr = UsageFormatter.tokenCountString(limit.currentValue)
-        let usageStr = UsageFormatter.tokenCountString(limit.usage)
-        let remainingStr = UsageFormatter.tokenCountString(limit.remaining)
-        return "\(currentStr) / \(usageStr) (\(remainingStr) remaining)"
+
+        if let currentValue = limit.currentValue,
+           let usage = limit.usage,
+           let remaining = limit.remaining
+        {
+            let currentStr = UsageFormatter.tokenCountString(currentValue)
+            let usageStr = UsageFormatter.tokenCountString(usage)
+            let remainingStr = UsageFormatter.tokenCountString(remaining)
+            return "\(currentStr) / \(usageStr) (\(remainingStr) remaining)"
+        }
+
+        return nil
     }
 
     private struct PaceDetail {

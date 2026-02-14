@@ -9,8 +9,22 @@ import Testing
 @MainActor
 @Suite(.serialized)
 struct BatteryDrainDiagnosticTests {
+    private func ensureAppKitInitialized() {
+        _ = NSApplication.shared
+    }
+
+    private func makeStatusBarForTesting() -> NSStatusBar {
+        let env = ProcessInfo.processInfo.environment
+        if env["GITHUB_ACTIONS"] == "true" || env["CI"] == "true" {
+            return .system
+        }
+        return NSStatusBar()
+    }
+
     @Test("Fallback provider should not animate when all providers are disabled")
     func fallbackProviderDoesNotAnimate() {
+        self.ensureAppKitInitialized()
+
         let settings = SettingsStore(
             configStore: testConfigStore(suiteName: "BatteryDrain-AllDisabled"),
             zaiTokenStore: NoopZaiTokenStore(),
@@ -39,7 +53,7 @@ struct BatteryDrainDiagnosticTests {
             account: fetcher.loadAccountInfo(),
             updater: DisabledUpdaterController(),
             preferencesSelection: PreferencesSelection(),
-            statusBar: NSStatusBar())
+            statusBar: self.makeStatusBarForTesting())
 
         #expect(
             controller.needsMenuBarIconAnimation() == false,
@@ -51,6 +65,8 @@ struct BatteryDrainDiagnosticTests {
 
     @Test("Enabled provider with data should not animate")
     func enabledProviderWithDataDoesNotAnimate() {
+        self.ensureAppKitInitialized()
+
         let settings = SettingsStore(
             configStore: testConfigStore(suiteName: "BatteryDrain-HasData"),
             zaiTokenStore: NoopZaiTokenStore(),
@@ -84,7 +100,7 @@ struct BatteryDrainDiagnosticTests {
             account: fetcher.loadAccountInfo(),
             updater: DisabledUpdaterController(),
             preferencesSelection: PreferencesSelection(),
-            statusBar: NSStatusBar())
+            statusBar: self.makeStatusBarForTesting())
 
         #expect(
             controller.needsMenuBarIconAnimation() == false,
@@ -96,6 +112,8 @@ struct BatteryDrainDiagnosticTests {
 
     @Test("Enabled provider without data should animate")
     func enabledProviderWithoutDataAnimates() {
+        self.ensureAppKitInitialized()
+
         let settings = SettingsStore(
             configStore: testConfigStore(suiteName: "BatteryDrain-NoData"),
             zaiTokenStore: NoopZaiTokenStore(),
@@ -122,7 +140,7 @@ struct BatteryDrainDiagnosticTests {
             account: fetcher.loadAccountInfo(),
             updater: DisabledUpdaterController(),
             preferencesSelection: PreferencesSelection(),
-            statusBar: NSStatusBar())
+            statusBar: self.makeStatusBarForTesting())
 
         #expect(
             controller.needsMenuBarIconAnimation() == true,
