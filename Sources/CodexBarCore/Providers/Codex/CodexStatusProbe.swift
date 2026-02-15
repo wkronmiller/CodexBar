@@ -184,7 +184,12 @@ public struct CodexStatusProbe {
 
     private static func isSparkLimitLine(_ line: String) -> Bool {
         let lower = line.lowercased()
-        guard lower.contains("spark") else { return false }
+        let normalized = lower
+            .replacingOccurrences(of: "-", with: " ")
+            .replacingOccurrences(of: "_", with: " ")
+            .replacingOccurrences(of: ".", with: " ")
+        let hasGPT53CodexLabel = normalized.contains("gpt 5 3") && normalized.contains("codex")
+        guard lower.contains("spark") || hasGPT53CodexLabel else { return false }
         if lower.contains("limit") || lower.contains("quota") { return true }
         if lower.contains("remaining") || lower.contains("left") { return true }
         return lower.contains("%")

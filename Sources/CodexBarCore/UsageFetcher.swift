@@ -289,8 +289,13 @@ private struct RPCRateLimitSnapshot: Decodable, Encodable {
         for key in dynamic.allKeys {
             let lower = key.stringValue.lowercased()
             if skipKeys.contains(lower) { continue }
-            guard lower.contains("spark") || lower.contains("gpt_5_3") else { continue }
-            guard lower.contains("window") || lower.contains("limit") else { continue }
+            let matchesSparkKey = lower.contains("spark")
+            let normalized = lower
+                .replacingOccurrences(of: "-", with: " ")
+                .replacingOccurrences(of: "_", with: " ")
+                .replacingOccurrences(of: ".", with: " ")
+            let matchesGPT53CodexKey = normalized.contains("gpt 5 3") && normalized.contains("codex")
+            guard matchesSparkKey || matchesGPT53CodexKey else { continue }
             if let window = try? dynamic.decode(RPCRateLimitWindow.self, forKey: key) {
                 return window
             }
