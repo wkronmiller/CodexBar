@@ -107,8 +107,8 @@ public struct CodexUsageResponse: Decodable, Sendable {
                     .replacingOccurrences(of: "-", with: " ")
                     .replacingOccurrences(of: "_", with: " ")
                     .replacingOccurrences(of: ".", with: " ")
-                let matchesGPT53CodexKey = normalized.contains("gpt 5 3") && normalized.contains("codex")
-                guard matchesSparkKey || matchesGPT53CodexKey else { continue }
+                let matchesGPT53Key = normalized.contains("gpt 5 3")
+                guard matchesSparkKey || matchesGPT53Key else { continue }
                 if let window = try? dynamic.decode(WindowSnapshot.self, forKey: key) {
                     return window
                 }

@@ -178,6 +178,41 @@ struct CodexOAuthTests {
     }
 
     @Test
+    func mapsUsageWindowsFromOAuthWithGPT53KeyWithoutCodexOrSpark() throws {
+        let json = """
+        {
+          "rate_limit": {
+            "primary_window": {
+              "used_percent": 22,
+              "reset_at": 1766948068,
+              "limit_window_seconds": 18000
+            },
+            "secondary_window": {
+              "used_percent": 43,
+              "reset_at": 1767407914,
+              "limit_window_seconds": 604800
+            },
+            "gpt_5_3_window": {
+              "used_percent": 19,
+              "reset_at": 1767407914,
+              "limit_window_seconds": 604800
+            }
+          }
+        }
+        """
+        let creds = CodexOAuthCredentials(
+            accessToken: "access",
+            refreshToken: "refresh",
+            idToken: nil,
+            accountId: nil,
+            lastRefresh: Date())
+        let snapshot = try CodexOAuthFetchStrategy._mapUsageForTesting(Data(json.utf8), credentials: creds)
+        #expect(snapshot.tertiary?.usedPercent == 19)
+        #expect(snapshot.tertiary?.windowMinutes == 10080)
+        #expect(snapshot.tertiary?.resetsAt != nil)
+    }
+
+    @Test
     func resolvesChatGPTUsageURLFromConfig() {
         let config = "chatgpt_base_url = \"https://chatgpt.com/backend-api/\"\n"
         let url = CodexOAuthUsageFetcher._resolveUsageURLForTesting(configContents: config)

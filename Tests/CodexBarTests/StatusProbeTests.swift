@@ -65,6 +65,22 @@ struct StatusProbeTests {
     }
 
     @Test
+    func parseCodexStatusWithGPT53QuotaWithoutCodexOrSparkWord() throws {
+        let sample = """
+        Credits: 420 credits
+        5h limit: [██████    ] 60% left (resets 10:45)
+        Weekly limit: [█████     ] 55% left (resets Tue at 9:00 AM)
+        GPT-5.3 quota: [███       ] 35% left (resets Thu at 9:00 AM)
+        """
+
+        let snap = try CodexStatusProbe.parse(text: sample)
+        #expect(snap.fiveHourPercentLeft == 60)
+        #expect(snap.weeklyPercentLeft == 55)
+        #expect(snap.sparkPercentLeft == 35)
+        #expect(snap.sparkResetDescription?.contains("Thu at 9:00 AM") == true)
+    }
+
+    @Test
     func parseClaudeStatus() throws {
         let sample = """
         Settings: Status   Config   Usage (tab to cycle)
