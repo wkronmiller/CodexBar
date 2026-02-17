@@ -20,7 +20,7 @@ extension CodexBarCLI {
           Print usage from enabled providers as text (default) or JSON. Honors your in-app toggles.
           Output format: use --json (or --format json) for JSON on stdout; use --json-output for JSON logs on stderr.
           When --source is auto/web (macOS only), CodexBar uses browser cookies to fetch web-backed data:
-          - Codex: OpenAI web dashboard (usage limits, credits remaining, code review remaining, usage breakdown).
+          - Codex: OpenAI web dashboard (usage limits, credits remaining, usage breakdown).
             Auto falls back to Codex CLI only when cookies are missing.
           - Claude: claude.ai API.
             Auto falls back to Claude CLI only when cookies are missing.

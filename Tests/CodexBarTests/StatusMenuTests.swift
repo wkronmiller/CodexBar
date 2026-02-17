@@ -142,7 +142,6 @@ struct StatusMenuTests {
         let breakdown = OpenAIDashboardSnapshot.makeDailyBreakdown(from: [event], maxDays: 30)
         store.openAIDashboard = OpenAIDashboardSnapshot(
             signedInEmail: "user@example.com",
-            codeReviewRemainingPercent: 100,
             creditEvents: [event],
             dailyBreakdown: breakdown,
             usageBreakdown: breakdown,
@@ -246,7 +245,6 @@ struct StatusMenuTests {
         let store = UsageStore(fetcher: fetcher, browserDetection: BrowserDetection(cacheTTL: 0), settings: settings)
         store.openAIDashboard = OpenAIDashboardSnapshot(
             signedInEmail: "user@example.com",
-            codeReviewRemainingPercent: 100,
             creditEvents: [],
             dailyBreakdown: [],
             usageBreakdown: [],
@@ -307,7 +305,6 @@ struct StatusMenuTests {
         let breakdown = OpenAIDashboardSnapshot.makeDailyBreakdown(from: events, maxDays: 30)
         store.openAIDashboard = OpenAIDashboardSnapshot(
             signedInEmail: "user@example.com",
-            codeReviewRemainingPercent: 100,
             creditEvents: events,
             dailyBreakdown: breakdown,
             usageBreakdown: breakdown,
@@ -360,7 +357,6 @@ struct StatusMenuTests {
         store.credits = CreditsSnapshot(remaining: 100, events: [], updatedAt: Date())
         store.openAIDashboard = OpenAIDashboardSnapshot(
             signedInEmail: "user@example.com",
-            codeReviewRemainingPercent: 100,
             creditEvents: [],
             dailyBreakdown: [],
             usageBreakdown: [],

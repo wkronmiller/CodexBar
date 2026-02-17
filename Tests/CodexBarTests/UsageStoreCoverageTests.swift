@@ -59,7 +59,6 @@ struct UsageStoreCoverageTests {
         let store = Self.makeUsageStore(settings: settings)
         store.openAIDashboard = OpenAIDashboardSnapshot(
             signedInEmail: "user@example.com",
-            codeReviewRemainingPercent: nil,
             creditEvents: [],
             dailyBreakdown: [],
             usageBreakdown: [],
@@ -87,7 +86,6 @@ struct UsageStoreCoverageTests {
 
         let dashboard = OpenAIDashboardSnapshot(
             signedInEmail: "user@example.com",
-            codeReviewRemainingPercent: nil,
             creditEvents: [],
             dailyBreakdown: [],
             usageBreakdown: [],
@@ -108,7 +106,6 @@ struct UsageStoreCoverageTests {
 
         let updatedDashboard = OpenAIDashboardSnapshot(
             signedInEmail: "user@example.com",
-            codeReviewRemainingPercent: nil,
             creditEvents: [],
             dailyBreakdown: [],
             usageBreakdown: [],
@@ -127,7 +124,6 @@ struct UsageStoreCoverageTests {
 
         let dashboardWithoutSpark = OpenAIDashboardSnapshot(
             signedInEmail: "user@example.com",
-            codeReviewRemainingPercent: 73,
             creditEvents: [],
             dailyBreakdown: [],
             usageBreakdown: [],
@@ -161,7 +157,6 @@ struct UsageStoreCoverageTests {
 
         let dashboard = OpenAIDashboardSnapshot(
             signedInEmail: "user@example.com",
-            codeReviewRemainingPercent: nil,
             creditEvents: [],
             dailyBreakdown: [],
             usageBreakdown: [],
@@ -180,7 +175,6 @@ struct UsageStoreCoverageTests {
 
         let dashboardWithoutSpark = OpenAIDashboardSnapshot(
             signedInEmail: "user@example.com",
-            codeReviewRemainingPercent: 73,
             creditEvents: [],
             dailyBreakdown: [],
             usageBreakdown: [],

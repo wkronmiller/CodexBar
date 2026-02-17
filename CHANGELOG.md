@@ -317,7 +317,7 @@
 - CLI resolution now uses the login shell PATH directly (no more heuristic path scanning), so Codex/Claude match your shell config reliably.
 
 ## 0.9.0 — 2025-12-19
-- New optional OpenAI web access: reuses your signed-in Safari/Chrome session to show **Code review remaining**, **Usage breakdown**, and **Credits usage history** in the menu (no credentials stored).
+- New optional OpenAI web access: reuses your signed-in Safari/Chrome session to show **Usage breakdown** and **Credits usage history** in the menu (no credentials stored).
 - Credits still come from the Codex CLI; OpenAI web access is only used for the dashboard extras above.
 - OpenAI web sessions auto-sync to the Codex CLI email, support multiple accounts, and reset/re-import cookies on account switches to avoid stale cross-account data.
 - Fix Chrome cookie import (macOS 10): signed-in Chrome sessions are detected reliably (thanks @tobihagemann!).

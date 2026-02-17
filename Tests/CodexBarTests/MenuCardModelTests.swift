@@ -91,22 +91,13 @@ struct MenuCardModelTests {
             identity: identity)
         let metadata = try #require(ProviderDefaults.metadata[.codex])
 
-        let dashboard = OpenAIDashboardSnapshot(
-            signedInEmail: "codex@example.com",
-            codeReviewRemainingPercent: 73,
-            creditEvents: [],
-            dailyBreakdown: [],
-            usageBreakdown: [],
-            creditsPurchaseURL: nil,
-            updatedAt: now)
-
         let model = UsageMenuCardView.Model.make(.init(
             provider: .codex,
             metadata: metadata,
             snapshot: snapshot,
             credits: nil,
             creditsError: nil,
-            dashboard: dashboard,
+            dashboard: nil,
             dashboardError: nil,
             tokenSnapshot: nil,
             tokenError: nil,
@@ -123,58 +114,11 @@ struct MenuCardModelTests {
         #expect(model.metrics.first?.title == "Session")
         #expect(model.metrics.first?.percent == 22)
         #expect(model.metrics.first?.percentLabel.contains("used") == true)
-        #expect(model.metrics.contains { $0.title == "Code review" && $0.percent == 27 })
+        #expect(model.metrics.contains { $0.title == "Weekly" && $0.percent == 40 })
     }
 
     @Test
-    func showsCodeReviewMetricWhenDashboardPresent() throws {
-        let now = Date()
-        let identity = ProviderIdentitySnapshot(
-            providerID: .codex,
-            accountEmail: "codex@example.com",
-            accountOrganization: nil,
-            loginMethod: nil)
-        let snapshot = UsageSnapshot(
-            primary: RateWindow(usedPercent: 0, windowMinutes: 300, resetsAt: nil, resetDescription: nil),
-            secondary: nil,
-            tertiary: nil,
-            updatedAt: now,
-            identity: identity)
-        let metadata = try #require(ProviderDefaults.metadata[.codex])
-
-        let dashboard = OpenAIDashboardSnapshot(
-            signedInEmail: "codex@example.com",
-            codeReviewRemainingPercent: 73,
-            creditEvents: [],
-            dailyBreakdown: [],
-            usageBreakdown: [],
-            creditsPurchaseURL: nil,
-            updatedAt: now)
-        let model = UsageMenuCardView.Model.make(.init(
-            provider: .codex,
-            metadata: metadata,
-            snapshot: snapshot,
-            credits: nil,
-            creditsError: nil,
-            dashboard: dashboard,
-            dashboardError: nil,
-            tokenSnapshot: nil,
-            tokenError: nil,
-            account: AccountInfo(email: "codex@example.com", plan: nil),
-            isRefreshing: false,
-            lastError: nil,
-            usageBarsShowUsed: false,
-            resetTimeDisplayStyle: .countdown,
-            tokenCostUsageEnabled: false,
-            showOptionalCreditsAndExtraUsage: true,
-            hidePersonalInfo: false,
-            now: now))
-
-        #expect(model.metrics.contains { $0.title == "Code review" && $0.percent == 73 })
-    }
-
-    @Test
-    func codexSparkMetricReplacesCodeReviewWhenSparkIsAvailable() throws {
+    func codexSparkMetricIsVisibleWhenSparkIsAvailable() throws {
         let now = Date()
         let identity = ProviderIdentitySnapshot(
             providerID: .codex,
@@ -189,21 +133,13 @@ struct MenuCardModelTests {
             identity: identity)
         let metadata = try #require(ProviderDefaults.metadata[.codex])
 
-        let dashboard = OpenAIDashboardSnapshot(
-            signedInEmail: "codex@example.com",
-            codeReviewRemainingPercent: 73,
-            creditEvents: [],
-            dailyBreakdown: [],
-            usageBreakdown: [],
-            creditsPurchaseURL: nil,
-            updatedAt: now)
         let model = UsageMenuCardView.Model.make(.init(
             provider: .codex,
             metadata: metadata,
             snapshot: snapshot,
             credits: nil,
             creditsError: nil,
-            dashboard: dashboard,
+            dashboard: nil,
             dashboardError: nil,
             tokenSnapshot: nil,
             tokenError: nil,
@@ -218,7 +154,6 @@ struct MenuCardModelTests {
             now: now))
 
         #expect(model.metrics.contains { $0.title == "GPT-5.3 Spark" && $0.percent == 35 })
-        #expect(!model.metrics.contains { $0.title == "Code review" })
     }
 
     @Test

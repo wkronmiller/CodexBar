@@ -55,7 +55,6 @@ Usage source picker:
 - Web scrape payload (via `OpenAIDashboardScrapeScript` + `OpenAIDashboardParser`):
   - Rate limits (5h + weekly) parsed from body text.
   - Credits remaining parsed from body text.
-  - Code review remaining (%).
   - Usage breakdown chart (Recharts bar data + legend colors).
   - Credits usage history table rows.
   - Credits purchase URL (best-effort).
