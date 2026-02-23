@@ -64,12 +64,14 @@ struct UsageMenuCardView: View {
             let spendLine: String
         }
 
+        let provider: UsageProvider
         let providerName: String
         let email: String
         let subtitleText: String
         let subtitleStyle: SubtitleStyle
         let planText: String?
         let metrics: [Metric]
+        let usageNotes: [String]
         let creditsText: String?
         let creditsRemaining: Double?
         let creditsHintText: String?
@@ -105,6 +107,13 @@ struct UsageMenuCardView: View {
     let width: CGFloat
     @Environment(\.menuItemHighlighted) private var isHighlighted
 
+    static func popupMetricTitle(provider: UsageProvider, metric: Model.Metric) -> String {
+        if provider == .openrouter, metric.id == "primary" {
+            return "API key limit"
+        }
+        return metric.title
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             UsageMenuCardHeaderView(model: self.model)
@@ -114,13 +123,15 @@ struct UsageMenuCardView: View {
             }
 
             if self.model.metrics.isEmpty {
-                if let placeholder = self.model.placeholder {
+                if !self.model.usageNotes.isEmpty {
+                    UsageNotesContent(notes: self.model.usageNotes)
+                } else if let placeholder = self.model.placeholder {
                     Text(placeholder)
                         .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted))
                         .font(.subheadline)
                 }
             } else {
-                let hasUsage = !self.model.metrics.isEmpty
+                let hasUsage = !self.model.metrics.isEmpty || !self.model.usageNotes.isEmpty
                 let hasCredits = self.model.creditsText != nil
                 let hasProviderCost = self.model.providerCost != nil
                 let hasCost = self.model.tokenUsage != nil || hasProviderCost
@@ -131,7 +142,11 @@ struct UsageMenuCardView: View {
                             ForEach(self.model.metrics, id: \.id) { metric in
                                 MetricRow(
                                     metric: metric,
+                                    title: Self.popupMetricTitle(provider: self.model.provider, metric: metric),
                                     progressColor: self.model.progressColor)
+                            }
+                            if !self.model.usageNotes.isEmpty {
+                                UsageNotesContent(notes: self.model.usageNotes)
                             }
                         }
                     }
@@ -197,7 +212,8 @@ struct UsageMenuCardView: View {
     }
 
     private var hasDetails: Bool {
-        !self.model.metrics.isEmpty || self.model.placeholder != nil || self.model.tokenUsage != nil ||
+        !self.model.metrics.isEmpty || !self.model.usageNotes.isEmpty || self.model.placeholder != nil ||
+            self.model.tokenUsage != nil ||
             self.model.providerCost != nil
     }
 }
@@ -330,12 +346,13 @@ private struct ProviderCostContent: View {
 
 private struct MetricRow: View {
     let metric: UsageMenuCardView.Model.Metric
+    let title: String
     let progressColor: Color
     @Environment(\.menuItemHighlighted) private var isHighlighted
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text(self.metric.title)
+            Text(self.title)
                 .font(.body)
                 .fontWeight(.medium)
             UsageProgressBar(
@@ -375,11 +392,30 @@ private struct MetricRow: View {
                     }
                 }
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
             if let detail = self.metric.detailText {
                 Text(detail)
                     .font(.footnote)
                     .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted))
                     .lineLimit(1)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+private struct UsageNotesContent: View {
+    let notes: [String]
+    @Environment(\.menuItemHighlighted) private var isHighlighted
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            ForEach(Array(self.notes.enumerated()), id: \.offset) { _, note in
+                Text(note)
+                    .font(.footnote)
+                    .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted))
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -416,7 +452,9 @@ struct UsageMenuCardUsageSectionView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             if self.model.metrics.isEmpty {
-                if let placeholder = self.model.placeholder {
+                if !self.model.usageNotes.isEmpty {
+                    UsageNotesContent(notes: self.model.usageNotes)
+                } else if let placeholder = self.model.placeholder {
                     Text(placeholder)
                         .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted))
                         .font(.subheadline)
@@ -425,7 +463,11 @@ struct UsageMenuCardUsageSectionView: View {
                 ForEach(self.model.metrics, id: \.id) { metric in
                     MetricRow(
                         metric: metric,
+                        title: UsageMenuCardView.popupMetricTitle(provider: self.model.provider, metric: metric),
                         progressColor: self.model.progressColor)
+                }
+                if !self.model.usageNotes.isEmpty {
+                    UsageNotesContent(notes: self.model.usageNotes)
                 }
             }
             if self.showBottomDivider {
@@ -626,7 +668,10 @@ extension UsageMenuCardView.Model {
             account: input.account,
             metadata: input.metadata)
         let metrics = Self.metrics(input: input)
-        let creditsText: String? = if input.provider == .codex, !input.showOptionalCreditsAndExtraUsage {
+        let usageNotes = Self.usageNotes(provider: input.provider, snapshot: input.snapshot)
+        let creditsText: String? = if input.provider == .openrouter {
+            nil
+        } else if input.provider == .codex, !input.showOptionalCreditsAndExtraUsage {
             nil
         } else {
             Self.creditsLine(metadata: input.metadata, credits: input.credits, error: input.creditsError)
@@ -649,12 +694,14 @@ extension UsageMenuCardView.Model {
         let placeholder = input.snapshot == nil && !input.isRefreshing && input.lastError == nil ? "No usage yet" : nil
 
         let model = UsageMenuCardView.Model(
+            provider: input.provider,
             providerName: input.metadata.displayName,
             email: redacted.email,
             subtitleText: redacted.subtitleText,
             subtitleStyle: subtitle.style,
             planText: planText,
             metrics: metrics,
+            usageNotes: usageNotes,
             creditsText: creditsText,
             creditsRemaining: input.credits?.remaining,
             creditsHintText: redacted.creditsHintText,
@@ -680,6 +727,23 @@ extension UsageMenuCardView.Model {
     private static func metricDescription(_ metric: UsageMenuCardView.Model.Metric?) -> String {
         guard let metric else { return "nil" }
         return String(format: "%.2f %@", metric.percent, metric.percentStyle.rawValue)
+    }
+
+    private static func usageNotes(provider: UsageProvider, snapshot: UsageSnapshot?) -> [String] {
+        guard provider == .openrouter,
+              let openRouter = snapshot?.openRouterUsage
+        else {
+            return []
+        }
+
+        switch openRouter.keyQuotaStatus {
+        case .available:
+            return []
+        case .noLimitConfigured:
+            return ["No limit set for the API key"]
+        case .unavailable:
+            return ["API key limit unavailable right now"]
+        }
     }
 
     private static func email(
@@ -784,6 +848,7 @@ extension UsageMenuCardView.Model {
         let zaiUsage = input.provider == .zai ? snapshot.zaiUsage : nil
         let zaiTokenDetail = Self.zaiLimitDetailText(limit: zaiUsage?.tokenLimit)
         let zaiTimeDetail = Self.zaiLimitDetailText(limit: zaiUsage?.timeLimit)
+        let openRouterQuotaDetail = Self.openRouterQuotaDetail(provider: input.provider, snapshot: snapshot)
         if let primary = snapshot.primary {
             let paceDetail = Self.paceDetail(
                 provider: input.provider,
@@ -792,6 +857,11 @@ extension UsageMenuCardView.Model {
                 showUsed: input.usageBarsShowUsed)
             var primaryDetailText: String? = input.provider == .zai ? zaiTokenDetail : nil
             var primaryResetText = Self.resetText(for: primary, style: input.resetTimeDisplayStyle, now: input.now)
+            if input.provider == .openrouter,
+               let openRouterQuotaDetail
+            {
+                primaryResetText = openRouterQuotaDetail
+            }
             if input.provider == .warp,
                let detail = primary.resetDescription,
                !detail.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -872,6 +942,21 @@ extension UsageMenuCardView.Model {
         }
 
         return nil
+    }
+
+    private static func openRouterQuotaDetail(provider: UsageProvider, snapshot: UsageSnapshot) -> String? {
+        guard provider == .openrouter,
+              let usage = snapshot.openRouterUsage,
+              usage.hasValidKeyQuota,
+              let keyRemaining = usage.keyRemaining,
+              let keyLimit = usage.keyLimit
+        else {
+            return nil
+        }
+
+        let remaining = UsageFormatter.usdString(keyRemaining)
+        let limit = UsageFormatter.usdString(keyLimit)
+        return "\(remaining)/\(limit) left"
     }
 
     private struct PaceDetail {
