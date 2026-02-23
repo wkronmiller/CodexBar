@@ -1,0 +1,110 @@
+name: Merge Upstream Changes
+
+on:
+  workflow_dispatch:
+    inputs:
+      strategy:
+        description: 'Merge strategy'
+        required: true
+        default: 'merge'
+        type: choice
+        options:
+          - merge
+          - ff-only
+
+concurrency:
+  group: merge-upstream-main
+  cancel-in-progress: false
+
+jobs:
+  merge:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: main
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Fetch all branches
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          git checkout main
+          git merge --ff-only origin/main
+          if git ls-remote --exit-code --heads origin upstream-sync >/dev/null 2>&1; then
+            git fetch origin upstream-sync:upstream-sync
+          else
+            echo "::error::origin/upstream-sync does not exist. Run 'Sync from Upstream' first."
+            exit 1
+          fi
+
+      - name: Inspect branch divergence
+        id: status
+        run: |
+          set -euo pipefail
+          git checkout main
+          AHEAD=$(git rev-list --count upstream-sync..main)
+          BEHIND=$(git rev-list --count main..upstream-sync)
+
+          echo "ahead=$AHEAD" >> "$GITHUB_OUTPUT"
+          echo "behind=$BEHIND" >> "$GITHUB_OUTPUT"
+
+          if [ "$BEHIND" -eq 0 ]; then
+            echo "no_changes=true" >> "$GITHUB_OUTPUT"
+            echo "main already includes all commits from upstream-sync"
+          else
+            echo "no_changes=false" >> "$GITHUB_OUTPUT"
+            echo "main is $BEHIND commits behind upstream-sync and $AHEAD commits ahead"
+          fi
+
+      - name: Merge upstream-sync into main
+        if: steps.status.outputs.no_changes != 'true'
+        run: |
+          set -euo pipefail
+          STRATEGY="${{ github.event.inputs.strategy }}"
+          AHEAD="${{ steps.status.outputs.ahead }}"
+
+          if [ "$STRATEGY" = "ff-only" ]; then
+            if [ "$AHEAD" -gt 0 ]; then
+              echo "::error::main has fork-only commits; ff-only merge is not possible. Use strategy 'merge'."
+              exit 1
+            fi
+
+            echo "Using fast-forward strategy"
+            if ! git merge --ff-only upstream-sync; then
+              echo "::error::Fast-forward merge failed. Resolve manually or retry with strategy 'merge'."
+              exit 1
+            fi
+          else
+            echo "Using merge strategy"
+            if ! git merge --no-ff upstream-sync -m "Merge upstream changes from upstream-sync"; then
+              echo "::error::Merge conflict detected. Resolve manually."
+              exit 1
+            fi
+          fi
+
+      - name: Push changes
+        if: steps.status.outputs.no_changes != 'true'
+        run: |
+          set -euo pipefail
+          git push origin main
+
+      - name: Summary
+        run: |
+          if [ "${{ steps.status.outputs.no_changes }}" = "true" ]; then
+            echo "No upstream changes to merge"
+            exit 0
+          fi
+
+          echo "Successfully merged upstream-sync into main"
+          echo "Strategy used: ${{ github.event.inputs.strategy }}"

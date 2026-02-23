@@ -1,0 +1,79 @@
+name: Sync from Upstream
+
+on:
+  schedule:
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: sync-upstream
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: main
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Add upstream remote
+        run: |
+          set -euo pipefail
+          git remote add upstream https://github.com/steipete/CodexBar.git || true
+          git fetch upstream main
+          git fetch origin main
+          git fetch origin upstream-sync:refs/remotes/origin/upstream-sync || true
+
+      - name: Check for new upstream commits
+        id: check
+        run: |
+          set -euo pipefail
+          UPSTREAM_NEW=$(git rev-list --count origin/main..upstream/main)
+          FORK_ONLY=$(git rev-list --count upstream/main..origin/main)
+          UPSTREAM_HEAD=$(git rev-parse --short upstream/main)
+
+          echo "upstream_commits=$UPSTREAM_NEW" >> "$GITHUB_OUTPUT"
+          echo "fork_commits=$FORK_ONLY" >> "$GITHUB_OUTPUT"
+          echo "upstream_head=$UPSTREAM_HEAD" >> "$GITHUB_OUTPUT"
+
+          if [ "$UPSTREAM_NEW" -gt 0 ]; then
+            echo "has_changes=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_changes=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Update upstream-sync branch
+        run: |
+          set -euo pipefail
+          git checkout -B upstream-sync upstream/main
+
+          if git ls-remote --exit-code --heads origin upstream-sync >/dev/null 2>&1; then
+            EXPECTED_REMOTE_SHA=$(git rev-parse refs/remotes/origin/upstream-sync)
+            git push origin upstream-sync --force-with-lease=refs/heads/upstream-sync:$EXPECTED_REMOTE_SHA
+          else
+            git push origin upstream-sync
+          fi
+
+      - name: Summary
+        run: |
+          echo "Updated upstream-sync to upstream/main @ ${{ steps.check.outputs.upstream_head }}"
+          echo "Upstream commits waiting to merge: ${{ steps.check.outputs.upstream_commits }}"
+          echo "Fork-only commits on main: ${{ steps.check.outputs.fork_commits }}"
+
+          if [ "${{ steps.check.outputs.has_changes }}" = "true" ]; then
+            echo "Run 'Merge Upstream Changes' to merge upstream-sync into main."
+          else
+            echo "main is already up to date with upstream/main."
+          fi
